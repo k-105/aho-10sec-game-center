@@ -1,0 +1,44 @@
+{
+  "identifier" : "Aho10SecGameCenterConfiguration",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "300",
+      "familyShareable" : false,
+      "internalID" : "remove-ads",
+      "localizations" : [
+        {
+          "description" : "広告を非表示にする仮商品",
+          "displayName" : "広告削除",
+          "locale" : "ja_JP"
+        }
+      ],
+      "productID" : "com.yourcompany.aho10sec.removeads",
+      "referenceName" : "Remove Ads",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "100",
+      "familyShareable" : false,
+      "internalID" : "small-tip",
+      "localizations" : [
+        {
+          "description" : "開発応援用の仮商品",
+          "displayName" : "応援チップS",
+          "locale" : "ja_JP"
+        }
+      ],
+      "productID" : "com.yourcompany.aho10sec.tip.small",
+      "referenceName" : "Small Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "Aho10SecGameCenter"
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
