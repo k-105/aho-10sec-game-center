@@ -1,6 +1,6 @@
 # aho-10sec-game-center
 
-SwiftUI / SpriteKit ベースで iPhone 向けの「アホ10秒ゲームセンター」を構築する最小実装です。
+SwiftUI / SpriteKit ベースで iPhone 向けの「10選のアホゲームセンター」を構築する最小実装です。
 
 ## 現在の状態
 - タイトル画面
