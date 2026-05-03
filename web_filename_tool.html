@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ファイル名変換ツール</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; background:#f8fafc; color:#0f172a; }
+    .card { max-width: 900px; margin: 0 auto; background:#fff; border-radius:16px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,.08); }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    .dropzone { border:2px dashed #94a3b8; border-radius:12px; padding:24px; text-align:center; margin-bottom:16px; }
+    .dropzone.dragover { border-color:#2563eb; background:#eff6ff; }
+    .row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    button, select, input[type="text"] { padding:10px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; }
+    button { cursor:pointer; border:none; background:#2563eb; color:#fff; }
+    button.secondary { background:#334155; }
+    table { width:100%; border-collapse: collapse; margin-top: 12px; font-size: .95rem; }
+    th, td { padding:10px 8px; border-bottom:1px solid #e2e8f0; vertical-align: top; }
+    code { background:#e2e8f0; padding:2px 6px; border-radius:6px; }
+    .muted { color:#64748b; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ファイル名変換ツール（複数ファイル対応）</h1>
+    <p class="muted">ファイル内容はそのまま、ファイル名だけを安全な形に変換します。</p>
+
+    <div id="dropzone" class="dropzone">
+      <p><strong>ここにファイルをドロップ</strong> または</p>
+      <input id="fileInput" type="file" multiple />
+    </div>
+
+    <div class="row">
+      <select id="preset">
+        <option value="safe">safe: 英数字・-_ のみ</option>
+        <option value="kebab">kebab-case</option>
+        <option value="snake">snake_case</option>
+      </select>
+      <input id="prefix" type="text" placeholder="接頭辞（任意）" />
+      <button id="convertBtn">変換してダウンロード</button>
+      <button id="clearBtn" class="secondary">一覧クリア</button>
+    </div>
+
+    <table>
+      <thead><tr><th>#</th><th>元ファイル名</th><th>変換後ファイル名</th><th>サイズ</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const rows = document.getElementById('rows');
+    const convertBtn = document.getElementById('convertBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const preset = document.getElementById('preset');
+    const prefixEl = document.getElementById('prefix');
+
+    let files = [];
+
+    const formatBytes = bytes => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes/1024).toFixed(1)} KB`;
+      return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+    };
+
+    const splitExt = name => {
+      const i = name.lastIndexOf('.');
+      if (i <= 0 || i === name.length - 1) return { base: name, ext: '' };
+      return { base: name.slice(0, i), ext: name.slice(i) };
+    };
+
+    const normalize = (base, mode) => {
+      let s = base.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+      s = s.replace(/[^\w\s-]/g, ' ').trim();
+      s = s.replace(/\s+/g, mode === 'snake' ? '_' : '-');
+      s = s.replace(/_+/g, '_').replace(/-+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
+      if (mode === 'safe') s = s.replace(/-/g, '_');
+      return s.toLowerCase() || 'file';
+    };
+
+    const uniqueName = (target, used) => {
+      if (!used.has(target)) { used.add(target); return target; }
+      const { base, ext } = splitExt(target);
+      let n = 1;
+      while (used.has(`${base}_${n}${ext}`)) n++;
+      const name = `${base}_${n}${ext}`;
+      used.add(name);
+      return name;
+    };
+
+    const renamed = () => {
+      const used = new Set();
+      const mode = preset.value;
+      const prefix = prefixEl.value.trim();
+      return files.map((file) => {
+        const { base, ext } = splitExt(file.name);
+        const normalized = normalize(base, mode);
+        const newNameRaw = prefix ? `${prefix}_${normalized}${ext.toLowerCase()}` : `${normalized}${ext.toLowerCase()}`;
+        const newName = uniqueName(newNameRaw, used);
+        return { file, newName };
+      });
+    };
+
+    const render = () => {
+      const list = renamed();
+      rows.innerHTML = list.map((item, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><code>${item.file.name}</code></td>
+          <td><code>${item.newName}</code></td>
+          <td>${formatBytes(item.file.size)}</td>
+        </tr>
+      `).join('');
+    };
+
+    const addFiles = incoming => {
+      files = [...files, ...incoming];
+      render();
+    };
+
+    fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files || [])));
+
+    ['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    }));
+    ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+    }));
+    dropzone.addEventListener('drop', e => addFiles(Array.from(e.dataTransfer.files || [])));
+
+    clearBtn.addEventListener('click', () => {
+      files = [];
+      fileInput.value = '';
+      render();
+    });
+
+    [preset, prefixEl].forEach(el => el.addEventListener('input', render));
+
+    convertBtn.addEventListener('click', async () => {
+      const list = renamed();
+      for (const item of list) {
+        const blob = new Blob([await item.file.arrayBuffer()], { type: item.file.type || 'application/octet-stream' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = item.newName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      }
+    });
+  </script>
+</body>
+</html>
